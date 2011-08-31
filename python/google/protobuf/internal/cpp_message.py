@@ -387,7 +387,7 @@ def _AddDescriptors(message_descriptor, dictionary):
         field.full_name)
 
   dictionary['__slots__'] = list(dictionary['__descriptors'].iterkeys()) + [
-      '_cmsg', '_owner', '_composite_fields', 'Extensions']
+      '_cmsg', '_owner', '_composite_fields', 'Extensions', '_memory']
 
 
 def _AddEnumValues(message_descriptor, dictionary):
@@ -449,6 +449,10 @@ def _AddInitMethod(message_descriptor, cls):
     owner = kwargs.pop('__owner', None)
     if owner is not None:
       self._owner = owner
+      
+    memory = kwargs.pop('__memory', None)
+    if memory is not None:
+      self._memory = memory
 
     self.Extensions = ExtensionDict(self)
     self._composite_fields = {}

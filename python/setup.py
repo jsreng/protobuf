@@ -15,8 +15,13 @@ import subprocess
 
 maintainer_email = "protobuf@googlegroups.com"
 
+if sys.maxsize > 2**32: outdir = 'x64'
+else: outdir = 'Win32'
+
 # Find the Protocol Compiler.
-if os.path.exists("../src/protoc"):
+if os.path.exists("../vsprojects/"+outdir+"/Release-static/protoc.exe"):
+  protoc = "../vsprojects/"+outdir+"/Release-static/protoc.exe"
+elif os.path.exists("../src/protoc"):
   protoc = "../src/protoc"
 elif os.path.exists("../src/protoc.exe"):
   protoc = "../src/protoc.exe"
@@ -105,17 +110,35 @@ if __name__ == '__main__':
     generate_proto("../src/google/protobuf/compiler/plugin.proto")
 
   ext_module_list = []
-
+  lib_prefix = ""
+  if os.name == "nt":
+    lib_prefix = "lib"
+  
   # C++ implementation extension
   if os.getenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python") == "cpp":
     print "Using EXPERIMENTAL C++ Implmenetation."
-    ext_module_list.append(Extension(
-        "google.protobuf.internal._net_proto2___python",
-        [ "google/protobuf/pyext/python_descriptor.cc",
-          "google/protobuf/pyext/python_protobuf.cc",
-          "google/protobuf/pyext/python-proto2.cc" ],
-        include_dirs = [ "." ],
-        libraries = [ "protobuf" ]))
+    if(len(sys.argv) >= 3 and sys.argv[2] == "--debug"):
+      print "Debug version"
+      ext_module_list.append(Extension(
+          "google.protobuf.internal._net_proto2___python",
+          [ "google/protobuf/pyext/python_descriptor.cc",
+            "google/protobuf/pyext/python_protobuf.cc",
+            "google/protobuf/pyext/python-proto2.cc" ],
+          define_macros = [('PROTOBUF_USE_DLLS', None)],
+          include_dirs = [ "../src", ".", ],
+          libraries = [ lib_prefix+"protobufd" ],
+          library_dirs = [ "../vsprojects/"+outdir+"/Debug/" ]))
+    else:
+      print "Release version"
+      ext_module_list.append(Extension(
+          "google.protobuf.internal._net_proto2___python",
+          [ "google/protobuf/pyext/python_descriptor.cc",
+            "google/protobuf/pyext/python_protobuf.cc",
+            "google/protobuf/pyext/python-proto2.cc" ],
+          define_macros = [('PROTOBUF_USE_DLLS', None)],
+          include_dirs = [ "../src", ".", ],
+          libraries = [ lib_prefix+"protobuf" ],
+          library_dirs = [ "../vsprojects/"+outdir+"/Release/" ]))
 
   setup(name = 'protobuf',
         version = '2.4.1',
@@ -147,6 +170,9 @@ if __name__ == '__main__':
         maintainer_email = 'protobuf@googlegroups.com',
         license = 'New BSD License',
         description = 'Protocol Buffers',
+        headers = ['google/protobuf/pyext/python-proto2.h',
+                   'google/protobuf/pyext/python_protobuf.h',
+                   'google/protobuf/pyext/python_descriptor.h'],
         long_description =
           "Protocol Buffers are Google's data interchange format.",
         )
