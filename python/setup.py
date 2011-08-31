@@ -149,6 +149,9 @@ if __name__ == '__main__':
         maintainer_email = 'protobuf@googlegroups.com',
         license = 'New BSD License',
         description = 'Protocol Buffers',
+        headers = ['google/protobuf/pyext/python-proto2.h',
+                   'google/protobuf/pyext/python_protobuf.h',
+                   'google/protobuf/pyext/python_descriptor.h'],
         long_description =
           "Protocol Buffers are Google's data interchange format.",
         )
