@@ -1606,6 +1606,76 @@ static google::protobuf::Message* MutableCProtoInsidePyProtoImpl(PyObject* msg) 
   return c_msg->message;
 }
 
+static PyObject* NewPyProtoFromCProto(google::protobuf::Message* message)
+{
+  CMessage* cmsg = PyObject_New(CMessage, &CMessage_Type);
+  if (cmsg == NULL) {
+    return NULL;
+  }
+  cmsg->message = message;//->New();
+  cmsg->free_message = false;//true;
+  cmsg->full_name = message->GetDescriptor()->full_name().c_str();
+  cmsg->read_only = false;
+  cmsg->parent = NULL;
+  cmsg->parent_field = NULL;
+
+  PyObject* py_cmsg = reinterpret_cast<PyObject*>(cmsg);
+  return py_cmsg;
+}
+
+static PyObject* ClonePyProtoFromCProto(const google::protobuf::Message* message)
+{
+  CMessage* cmsg = PyObject_New(CMessage, &CMessage_Type);
+  if (cmsg == NULL) {
+    return NULL;
+  }
+  cmsg->message = message->New();
+  cmsg->message->CopyFrom(*message);
+  cmsg->free_message = true;
+  cmsg->full_name = message->GetDescriptor()->full_name().c_str();
+  cmsg->read_only = false;
+  cmsg->parent = NULL;
+  cmsg->parent_field = NULL;
+
+  PyObject* py_cmsg = reinterpret_cast<PyObject*>(cmsg);
+  return py_cmsg;
+}
+
+static void DisownCProto(PyObject* msg) {
+  PyObject* c_msg_obj = PyObject_GetAttrString(msg, "_cmsg");
+  if (c_msg_obj == NULL) {
+    PyErr_Clear();
+    return;
+  }
+  Py_DECREF(c_msg_obj);
+  if (!PyObject_TypeCheck(c_msg_obj, &CMessage_Type)) {
+    return;
+  }  
+  
+  CMessage* c_msg = reinterpret_cast<CMessage*>(c_msg_obj);
+  c_msg->free_message = false;
+}
+
+#include "python-proto2.h"
+static void AddCAPI(PyObject* module)
+{
+  static void *PyProtobuf_API[PyProtobuf_API_pointers];
+  PyObject *c_api_object;
+
+  /* Initialize the C API pointer array */
+  PyProtobuf_API[PyProtobuf_GetCProtoInsidePyProtobuf_NUM] = (void *)GetCProtoInsidePyProtoImpl;
+  PyProtobuf_API[PyProtobuf_MutableCProtoInsidePyProtobuf_NUM] = (void *)MutableCProtoInsidePyProtoImpl;
+  PyProtobuf_API[PyProtobuf_NewPyProtoFromCProto_NUM] = (void *)NewPyProtoFromCProto;
+  PyProtobuf_API[PyProtobuf_ClonePyProtoFromCProto_NUM] = (void *)ClonePyProtoFromCProto;
+  PyProtobuf_API[PyProtobuf_DisownCProto_NUM] = (void *)DisownCProto;
+
+  /* Create a CObject containing the API pointer array's address */
+  c_api_object = PyCObject_FromVoidPtr((void *)PyProtobuf_API, NULL);
+
+  if (c_api_object != NULL)
+    PyModule_AddObject(module, "_C_API", c_api_object);
+}
+
 // --- Module Init Function:
 
 static const char module_docstring[] =
@@ -1637,6 +1707,8 @@ extern "C" {
     }
 
     AddConstants(m);
+
+    AddCAPI(m);
 
     CMessage_Type.tp_new = PyType_GenericNew;
     if (PyType_Ready(&CMessage_Type) < 0) {
