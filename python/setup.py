@@ -117,9 +117,11 @@ if __name__ == '__main__':
   # C++ implementation extension
   if os.getenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python") == "cpp":
     print "Using EXPERIMENTAL C++ Implmenetation."
-    if(len(sys.argv) >= 3 and sys.argv[2] == "--debug"):
-      print "Debug version"
-      ext_module_list.append(Extension(
+    import os
+    if os.name != "posix": # Assume windows
+      if(len(sys.argv) >= 3 and sys.argv[2] == "--debug"):
+        print "Debug version"
+        ext_module_list.append(Extension(
           "google.protobuf.internal._net_proto2___python",
           [ "google/protobuf/pyext/python_descriptor.cc",
             "google/protobuf/pyext/python_protobuf.cc",
@@ -128,9 +130,9 @@ if __name__ == '__main__':
           include_dirs = [ "../src", ".", ],
           libraries = [ lib_prefix+"protobufd" ],
           library_dirs = [ "../vsprojects/"+outdir+"/Debug/" ]))
-    else:
-      print "Release version"
-      ext_module_list.append(Extension(
+      else:
+        print "Release version"
+        ext_module_list.append(Extension(
           "google.protobuf.internal._net_proto2___python",
           [ "google/protobuf/pyext/python_descriptor.cc",
             "google/protobuf/pyext/python_protobuf.cc",
@@ -139,6 +141,16 @@ if __name__ == '__main__':
           include_dirs = [ "../src", ".", ],
           libraries = [ lib_prefix+"protobuf" ],
           library_dirs = [ "../vsprojects/"+outdir+"/Release/" ]))
+    else:
+       ext_module_list.append(Extension(
+          "google.protobuf.internal._net_proto2___python",
+          [ "google/protobuf/pyext/python_descriptor.cc",
+            "google/protobuf/pyext/python_protobuf.cc",
+            "google/protobuf/pyext/python-proto2.cc" ],
+          include_dirs = [ "../src", ".", ],
+          libraries = [ "protobuf" ],
+          runtime_library_dirs = [ "../src/.libs" ],
+          library_dirs = [ "../src/.libs" ]))
 
   setup(name = 'protobuf',
         version = '2.4.1',
